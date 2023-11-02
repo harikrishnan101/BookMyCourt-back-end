@@ -1,9 +1,11 @@
 const COURT = require('../models/courtSchema')
 
-const multer = require('multer')
+const multer = require('multer');
+const courtSchedules = require('../models/courtTimingSchema');
+const court = require('../models/courtSchema');
 const registerNewCourt = (req, res) => {
 
-    console.log(req.query);
+    // console.log(req.query);
     const fileStorage = multer.diskStorage({
         destination: (req, file, cb) => {
             cb(null, "public/venderCourts");
@@ -78,6 +80,77 @@ const getSingleCourtData = (req, res) => {
         });
 };
 
+const addCourtTimings = (req, res) => {
+   try {
+     console.log(req.body);
+ 
+     let currentDate = new Date(req.body.date.startDate);
+     const endDate = new Date(req.body.date.endDate);
+     const timingObjectArray = [];
+ 
+     while (currentDate <= endDate) {
+         req.body.schedules.forEach((obj) => { // Use 'forEach' instead of 'foreach'
+             timingObjectArray.push({
+                 date: currentDate, // Change 'data' to 'date'
+                 slot: {
+                     name: obj.name,
+                     id: obj.id
+                 },
+                 cost: req.body.cost,
+                 courtId: req.body.courtId
+             });
+         });
+ 
+         currentDate.setDate(currentDate.getDate() + 1);
+     }
+ 
+     courtSchedules.insertMany(timingObjectArray)
+         .then((resp) => {
+             res.status(200).json({ message: "Schedule added successfully" });
+         })
+   } catch (error) {
+    res.status(500).json(error)
+   }
+
+}
+
+const getLatestUpdateDate=(req,res)=>{
+   try {
+     courtSchedules.find({courtId:req.query.courtId}).sort({date:1}).limit(1).select('date').then((resp)=>{
+ 
+         console.log("hello");
+         let latestDate=new Date(resp[0]?.date)
+         res.status(200).json({minDate:latestDate})
+     })
+   } catch (error) {
+    res.status(500).json(error)
+   }
+}
 
 
-module.exports = { registerNewCourt, getMyCourtData,getSingleCourtData }
+const getAllCourtData=(req,res)=>{
+    COURT.find().then((resp)=>{
+        res.status(200).json({court:resp})
+    })
+    .catch((err)=>{
+        res.status(400).json({message:"something wrong"})
+    })
+}
+
+const getslotData=(req,res)=>{
+   courtSchedules.aggregate([
+{
+    $match:{
+
+    courtId:req.query.courtId,
+    date
+    }
+}
+
+
+   ])
+}
+
+
+
+module.exports = { registerNewCourt,getMyCourtData,getSingleCourtData,addCourtTimings,getLatestUpdateDate,getAllCourtData,getslotData}

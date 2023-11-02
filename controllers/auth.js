@@ -46,10 +46,10 @@ const dologin = async (req, res) => {
         }
     } catch (error) {
         res.status(403).json({ login: false})
-       console.log(error);
+    //    console.log(error);
     }
    
 
 }
 
-module.exports = {dosignup, dologin }
+module.exports = {dosignup,dologin}
