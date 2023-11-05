@@ -1,8 +1,12 @@
 const COURT = require('../models/courtSchema')
-
+const mongoose = require('mongoose')
 const multer = require('multer');
 const courtSchedules = require('../models/courtTimingSchema');
 const court = require('../models/courtSchema');
+const ObjectId = require('mongoose').Types.ObjectId
+
+
+
 const registerNewCourt = (req, res) => {
 
     // console.log(req.query);
@@ -68,6 +72,8 @@ const getSingleCourtData = (req, res) => {
 
     COURT.findOne({ _id: req.query.courtId })
         .then(response => {
+
+            
             if (response) {
                 res.status(200).json({ data: response });
             } else {
@@ -81,76 +87,108 @@ const getSingleCourtData = (req, res) => {
 };
 
 const addCourtTimings = (req, res) => {
-   try {
-     console.log(req.body);
- 
-     let currentDate = new Date(req.body.date.startDate);
-     const endDate = new Date(req.body.date.endDate);
-     const timingObjectArray = [];
- 
-     while (currentDate <= endDate) {
-         req.body.schedules.forEach((obj) => { // Use 'forEach' instead of 'foreach'
-             timingObjectArray.push({
-                 date: currentDate, // Change 'data' to 'date'
-                 slot: {
-                     name: obj.name,
-                     id: obj.id
-                 },
-                 cost: req.body.cost,
-                 courtId: req.body.courtId
-             });
-         });
- 
-         currentDate.setDate(currentDate.getDate() + 1);
-     }
- 
-     courtSchedules.insertMany(timingObjectArray)
-         .then((resp) => {
-             res.status(200).json({ message: "Schedule added successfully" });
-         })
-   } catch (error) {
-    res.status(500).json(error)
-   }
+    try {
+        console.log(req.body);
+
+        let currentDate = new Date(req.body.date.startDate);
+        const endDate = new Date(req.body.date.endDate);
+        const timingObjectArray = [];
+
+        while (currentDate <= endDate) {
+            console.log(currentDate, "date");
+            for (i = 0; i < req.body.schedules.length; i++) {
+
+                timingObjectArray.push({
+                    date: JSON.parse(JSON.stringify(currentDate)), // Change 'data' to 'date'
+                    slot: {
+                        name: req.body.schedules[i].name,
+                        id: req.body.schedules[i].id
+                    },
+                    cost: req.body.cost,
+                    courtId: req.body.courtId
+                });
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        courtSchedules.insertMany(timingObjectArray)
+            .then((resp) => {
+                res.status(200).json({ message: "Schedule added successfully" });
+            })
+    } catch (error) {
+        res.status(500).json(error)
+    }
 
 }
 
-const getLatestUpdateDate=(req,res)=>{
-   try {
-     courtSchedules.find({courtId:req.query.courtId}).sort({date:1}).limit(1).select('date').then((resp)=>{
- 
-         console.log("hello");
-         let latestDate=new Date(resp[0]?.date)
-         res.status(200).json({minDate:latestDate})
-     })
-   } catch (error) {
-    res.status(500).json(error)
-   }
-}
+const getLatestUpdateDate = (req, res) => {
+    try {
+        courtSchedules.find({ courtId: req.query.courtId }).sort({ date: 1 }).limit(1).select('date').then((resp) => {
 
-
-const getAllCourtData=(req,res)=>{
-    COURT.find().then((resp)=>{
-        res.status(200).json({court:resp})
-    })
-    .catch((err)=>{
-        res.status(400).json({message:"something wrong"})
-    })
-}
-
-const getslotData=(req,res)=>{
-   courtSchedules.aggregate([
-{
-    $match:{
-
-    courtId:req.query.courtId,
-    date
+            console.log("hello");
+            let latestDate = new Date(resp[0]?.date)
+            res.status(200).json({ minDate: latestDate })
+        })
+    } catch (error) {
+        res.status(500).json(error)
     }
 }
 
 
-   ])
+const getAllCourtData = (req, res) => {
+    COURT.find().then((resp) => {
+        res.status(200).json({ court: resp })
+    })
+        .catch((err) => {
+            res.status(400).json({ message: "something wrong" })
+        })
 }
 
+const getslotData = (req, res) => {
+    try {
+        console.log(req.query);
+        console.log(new Date(req.query.date.split("T")[0]))
+        courtSchedules.aggregate([
+            {
+                $match: {
+                    courtId: new ObjectId(req.query.courtId),
+                    date: new Date(req.query.date.split("T")[0]),
+                    "slot.id": { $gt:parseInt(-1) }
+                }
+            },
+            {
+                $lookup: {
+                    from: "courts",
+                    localField: 'courtId',
+                    foreignField: '_id',
+                    as: "courts"
+                }
+            },
+            {
+                $project: {
+                    _id:1,
+                    date:1,
+                    slot:1,
+                    cost:1,
+                    bookedBY:1,
+                    courts:{$arrayElemAt:['$courts',0]}
+                }
+            }
+        
+        ])
+        .then((resp)=>{
+            console.log(resp,"resp");
+            res.status(200).json(resp)
+        })
+    .catch(err => {
+        console.log(err);
+    })
+        } catch (error) {
+
+}
+    }
 
 
-module.exports = { registerNewCourt,getMyCourtData,getSingleCourtData,addCourtTimings,getLatestUpdateDate,getAllCourtData,getslotData}
+
+module.exports = { registerNewCourt, getMyCourtData, getSingleCourtData, addCourtTimings, getLatestUpdateDate, getAllCourtData, getslotData }
