@@ -9,7 +9,7 @@ const ObjectId = require('mongoose').Types.ObjectId
 
 const registerNewCourt = (req, res) => {
 
-    // console.log(req.query);
+    
     const fileStorage = multer.diskStorage({
         destination: (req, file, cb) => {
             cb(null, "public/venderCourts");
@@ -23,7 +23,7 @@ const registerNewCourt = (req, res) => {
 
     upload(req, res, (err) => {
 
-        // console.log(req.file.filename,req.filename);
+       
         COURT({
             name: req.query.name,
             location: req.query.location,
@@ -36,7 +36,7 @@ const registerNewCourt = (req, res) => {
                 res.status(200).json({ message: "court registration successfull" })
             })
             .catch(res => {
-                // console.log(res);
+                
                 res.status(403).json({ message: "court registration failed" })
             })
     })
@@ -55,7 +55,7 @@ const getMyCourtData = (req, res) => {
             res.status(200).json({ data: response });
         })
         .catch(error => {
-            console.log(error);
+           
             res.status(500).json({ message: "Failed to fetch court data" });
         });
 };
@@ -81,21 +81,21 @@ const getSingleCourtData = (req, res) => {
             }
         })
         .catch(error => {
-            console.log(error);
+           
             res.status(500).json({ message: "Failed to fetch court data" });
         });
 };
 
 const addCourtTimings = (req, res) => {
     try {
-        console.log(req.body);
+       
 
         let currentDate = new Date(req.body.date.startDate);
         const endDate = new Date(req.body.date.endDate);
         const timingObjectArray = [];
 
         while (currentDate <= endDate) {
-            console.log(currentDate, "date");
+            
             for (i = 0; i < req.body.schedules.length; i++) {
 
                 timingObjectArray.push({
@@ -126,7 +126,7 @@ const getLatestUpdateDate = (req, res) => {
     try {
         courtSchedules.find({ courtId: req.query.courtId }).sort({ date: 1 }).limit(1).select('date').then((resp) => {
 
-            console.log("hello");
+          
             let latestDate = new Date(resp[0]?.date)
             res.status(200).json({ minDate: latestDate })
         })
@@ -147,14 +147,15 @@ const getAllCourtData = (req, res) => {
 
 const getslotData = (req, res) => {
     try {
-        console.log(req.query);
-        console.log(new Date(req.query.date.split("T")[0]))
+       
+       
         courtSchedules.aggregate([
             {
                 $match: {
                     courtId: new ObjectId(req.query.courtId),
                     date: new Date(req.query.date.split("T")[0]),
-                    "slot.id": { $gt:parseInt(-1) }
+                    "slot.id": { $gt:parseInt(req.query.currentHour) }
+                    // "slot.id": { $gt:parseInt(-1) }
                 }
             },
             {
@@ -178,11 +179,11 @@ const getslotData = (req, res) => {
         
         ])
         .then((resp)=>{
-            console.log(resp,"resp");
+            
             res.status(200).json(resp)
         })
     .catch(err => {
-        console.log(err);
+       
     })
         } catch (error) {
 

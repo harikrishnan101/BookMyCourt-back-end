@@ -24,6 +24,9 @@ cancellation:{
 courtId:{
     type:mongoose.Types.ObjectId,
     ref:'users'
+},
+paymentOrders:{
+    type:Array
 }
 
 })
